@@ -96,6 +96,67 @@ h1 {
   color: #fff;
 }
 
+.timer-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.timer-card h2 {
+  font-size: 1rem;
+  margin-bottom: 12px;
+  color: #555;
+}
+
+.timer-setup {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.timer-inputs {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+}
+
+.timer-inputs select {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: #f9f9f9;
+  appearance: none;
+  text-align: center;
+}
+
+.timer-setup .btn {
+  flex: 0 0 auto;
+  padding: 10px 18px;
+}
+
+.timer-active {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.timer-display {
+  font-size: 2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  flex: 1;
+  text-align: center;
+}
+
+.timer-active .btn {
+  flex: 0 0 auto;
+  padding: 10px 18px;
+}
+
 .info {
   background: #fff;
   border-radius: 12px;

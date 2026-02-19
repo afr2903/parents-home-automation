@@ -1,9 +1,13 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 export default function App() {
   const [status, setStatus] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [timerMinutes, setTimerMinutes] = useState(5);
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [remaining, setRemaining] = useState(null); // seconds left, null = no timer
+  const timerRef = useRef(null);
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -37,6 +41,42 @@ export default function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const startTimer = async () => {
+    const total = timerMinutes * 60 + timerSeconds;
+    if (total <= 0) return;
+    await sendOverride("on");
+    setRemaining(total);
+    clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setRemaining((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+          sendOverride("off");
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const cancelTimer = async () => {
+    clearInterval(timerRef.current);
+    timerRef.current = null;
+    setRemaining(null);
+    await sendOverride("off");
+  };
+
+  useEffect(() => {
+    return () => clearInterval(timerRef.current);
+  }, []);
+
+  const fmtRemaining = (s) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, "0")}`;
   };
 
   const formatTime = (iso) => {
@@ -82,6 +122,50 @@ export default function App() {
             >
               Turn Off
             </button>
+          </div>
+
+          <div className="timer-card">
+            <h2>Timer</h2>
+            {remaining !== null ? (
+              <div className="timer-active">
+                <span className="timer-display">{fmtRemaining(remaining)}</span>
+                <button className="btn btn-off" onClick={cancelTimer}>
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div className="timer-setup">
+                <div className="timer-inputs">
+                  <label>
+                    <select
+                      value={timerMinutes}
+                      onChange={(e) => setTimerMinutes(Number(e.target.value))}
+                    >
+                      {Array.from({ length: 61 }, (_, i) => (
+                        <option key={i} value={i}>{i}m</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <select
+                      value={timerSeconds}
+                      onChange={(e) => setTimerSeconds(Number(e.target.value))}
+                    >
+                      {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((s) => (
+                        <option key={s} value={s}>{s}s</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <button
+                  className="btn btn-on"
+                  onClick={startTimer}
+                  disabled={loading || (timerMinutes === 0 && timerSeconds === 0)}
+                >
+                  Start Timer
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="info">
