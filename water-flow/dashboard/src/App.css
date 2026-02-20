@@ -6,113 +6,217 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #f5f5f5;
-  color: #333;
+  background: #f0f4f8;
+  color: #1e293b;
 }
 
 .container {
-  max-width: 420px;
-  margin: 40px auto;
-  padding: 24px;
+  max-width: 440px;
+  margin: 32px auto;
+  padding: 0 16px 40px;
 }
 
 h1 {
   text-align: center;
-  margin-bottom: 24px;
-  font-size: 1.5rem;
+  margin-bottom: 20px;
+  font-size: 1.4rem;
+  color: #0f172a;
+  letter-spacing: -0.01em;
 }
 
-.error {
-  background: #fee;
-  color: #c00;
-  padding: 10px 14px;
-  border-radius: 8px;
+/* ── Shared card ────────────────────────────────────────────────────── */
+.card {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
   margin-bottom: 16px;
+}
+
+/* ── Error ──────────────────────────────────────────────────────────── */
+.error {
+  background: #fee2e2;
+  color: #b91c1c;
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin-bottom: 14px;
   text-align: center;
   font-size: 0.9rem;
 }
 
-.status-card {
+/* ── Tank section ───────────────────────────────────────────────────── */
+.tank-section {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 20px;
   padding: 20px;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
 }
 
-.status-indicator {
-  width: 20px;
-  height: 20px;
+.tank-visual {
+  flex-shrink: 0;
+}
+
+.tank-stats {
+  flex: 1;
+}
+
+.tank-level-big {
+  font-size: 2.8rem;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 2px;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.4s;
+}
+
+.tank-level-label {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 14px;
+}
+
+.tank-detail {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-bottom: 10px;
+}
+
+.sensor-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.sensor-status {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #334155;
+}
+
+.sensor-age {
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+/* Status dot used in multiple places */
+.dot {
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.status-card.on .status-indicator {
-  background: #22c55e;
-  box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+.dot.online  { background: #22c55e; box-shadow: 0 0 6px rgba(34, 197, 94, 0.5); }
+.dot.offline { background: #cbd5e1; }
+
+/* ── Mode section ───────────────────────────────────────────────────── */
+.mode-section {
+  padding: 16px 20px;
 }
 
-.status-card.off .status-indicator {
-  background: #aaa;
+.mode-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
 }
 
-.status-label {
-  font-size: 1.25rem;
+.mode-label {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
   font-weight: 600;
 }
 
-.controls {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 20px;
+.mode-badge {
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
 }
 
+.mode-badge.auto   { background: #ede9fe; color: #6d28d9; }
+.mode-badge.manual { background: #fef3c7; color: #92400e; }
+
+.mode-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.pump-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+  font-size: 0.875rem;
+}
+
+.pump-state {
+  color: #334155;
+}
+
+.pump-reason {
+  margin-left: auto;
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────── */
 .btn {
   flex: 1;
-  padding: 14px;
+  padding: 11px 10px;
   border: none;
   border-radius: 10px;
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition: opacity 0.15s, filter 0.15s;
 }
 
 .btn:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 
-.btn-on {
-  background: #22c55e;
+.btn:not(:disabled):hover {
+  filter: brightness(0.93);
+}
+
+.btn-auto {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.btn-auto.active {
+  background: #7c3aed;
   color: #fff;
 }
 
-.btn-off {
-  background: #ef4444;
-  color: #fff;
-}
+.btn-on  { background: #22c55e; color: #fff; }
+.btn-off { background: #ef4444; color: #fff; }
 
+/* ── Timer ──────────────────────────────────────────────────────────── */
 .timer-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
+  padding: 16px 20px;
 }
 
 .timer-card h2 {
-  font-size: 1rem;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
   margin-bottom: 12px;
-  color: #555;
 }
 
 .timer-setup {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
 }
 
@@ -124,18 +228,19 @@ h1 {
 
 .timer-inputs select {
   flex: 1;
-  padding: 10px;
-  border: 1px solid #ddd;
+  padding: 9px;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
-  font-size: 1rem;
-  background: #f9f9f9;
+  font-size: 0.95rem;
+  background: #f8fafc;
   appearance: none;
   text-align: center;
+  color: #1e293b;
 }
 
 .timer-setup .btn {
   flex: 0 0 auto;
-  padding: 10px 18px;
+  padding: 9px 18px;
 }
 
 .timer-active {
@@ -145,44 +250,46 @@ h1 {
 }
 
 .timer-display {
-  font-size: 2rem;
+  font-size: 2.2rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   flex: 1;
   text-align: center;
+  color: #1e293b;
 }
 
 .timer-active .btn {
   flex: 0 0 auto;
-  padding: 10px 18px;
+  padding: 9px 18px;
 }
 
+/* ── Info rows ──────────────────────────────────────────────────────── */
 .info {
-  background: #fff;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 6px 20px;
 }
 
 .info-row {
   display: flex;
   justify-content: space-between;
-  padding: 8px 0;
-  font-size: 0.9rem;
+  align-items: center;
+  padding: 10px 0;
+  font-size: 0.875rem;
 }
 
 .info-row + .info-row {
-  border-top: 1px solid #eee;
+  border-top: 1px solid #f1f5f9;
 }
 
 .info-label {
-  color: #888;
+  color: #94a3b8;
 }
 
-.connected {
-  color: #22c55e;
-}
+.connected    { color: #22c55e; font-weight: 500; }
+.disconnected { color: #ef4444; font-weight: 500; }
 
-.disconnected {
-  color: #ef4444;
+/* ── Loading ────────────────────────────────────────────────────────── */
+.loading {
+  text-align: center;
+  color: #94a3b8;
+  margin-top: 40px;
 }
