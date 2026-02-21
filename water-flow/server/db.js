@@ -39,4 +39,41 @@ const getLatestReading = db.prepare(
   "SELECT * FROM sensor_readings ORDER BY id DESC LIMIT 1"
 );
 
-module.exports = { db, insertEvent, getRecentEvents, insertReading, getLatestReading };
+// Returns hourly averages for a given local date (YYYY-MM-DD).
+// The first two params are the same timezone modifier (e.g. '-6 hours').
+// Used by the History tab to plot water level across a day.
+const getReadingsByDay = db.prepare(`
+  SELECT
+    CAST(strftime('%H', datetime(recorded_at, ?)) AS INTEGER) AS hour,
+    ROUND(AVG(level_pct), 1)                                  AS level_pct,
+    COUNT(*)                                                   AS count
+  FROM sensor_readings
+  WHERE date(datetime(recorded_at, ?)) = ?
+  GROUP BY hour
+  ORDER BY hour
+`);
+
+// Returns per-minute averages for a specific local date + hour (0-23).
+// Params: tzMod, tzMod, date, tzMod, hour
+// Used by the History tab when the user zooms into a single hour.
+const getReadingsByHour = db.prepare(`
+  SELECT
+    CAST(strftime('%M', datetime(recorded_at, ?)) AS INTEGER) AS minute,
+    ROUND(AVG(level_pct), 1)                                  AS level_pct,
+    COUNT(*)                                                   AS count
+  FROM sensor_readings
+  WHERE date(datetime(recorded_at, ?)) = ?
+    AND CAST(strftime('%H', datetime(recorded_at, ?)) AS INTEGER) = ?
+  GROUP BY minute
+  ORDER BY minute
+`);
+
+module.exports = {
+  db,
+  insertEvent,
+  getRecentEvents,
+  insertReading,
+  getLatestReading,
+  getReadingsByDay,
+  getReadingsByHour,
+};
