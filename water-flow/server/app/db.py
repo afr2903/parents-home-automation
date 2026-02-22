@@ -1,11 +1,13 @@
-import sqlite3
-import os
-import threading
+from __future__ import annotations
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "pump.db")
+import sqlite3
+import threading
+from pathlib import Path
+
+DB_PATH = Path(__file__).parent.parent / "pump.db"
 
 _lock = threading.Lock()
-_conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+_conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
 _conn.row_factory = sqlite3.Row
 _conn.execute("PRAGMA journal_mode=WAL")
 _conn.executescript("""
@@ -25,18 +27,17 @@ _conn.executescript("""
 _conn.commit()
 
 
-def insert_event(action: str, reason: str):
+def insert_event(action: str, reason: str) -> None:
     with _lock:
         _conn.execute("INSERT INTO pump_events (action, reason) VALUES (?, ?)", (action, reason))
         _conn.commit()
 
 
-def get_recent_events():
-    rows = _conn.execute("SELECT * FROM pump_events ORDER BY id DESC LIMIT 50").fetchall()
-    return [dict(r) for r in rows]
+def get_recent_events() -> list[dict]:
+    return [dict(r) for r in _conn.execute("SELECT * FROM pump_events ORDER BY id DESC LIMIT 50").fetchall()]
 
 
-def insert_reading(distance_cm: float, level_pct: float):
+def insert_reading(distance_cm: float, level_pct: float) -> None:
     with _lock:
         _conn.execute(
             "INSERT INTO sensor_readings (distance_cm, level_pct) VALUES (?, ?)",
@@ -45,12 +46,12 @@ def insert_reading(distance_cm: float, level_pct: float):
         _conn.commit()
 
 
-def get_latest_reading():
+def get_latest_reading() -> dict | None:
     row = _conn.execute("SELECT * FROM sensor_readings ORDER BY id DESC LIMIT 1").fetchone()
     return dict(row) if row else None
 
 
-def get_readings_by_day(tz_mod: str, date: str):
+def get_readings_by_day(tz_mod: str, date: str) -> list[dict]:
     rows = _conn.execute(
         """
         SELECT
@@ -67,7 +68,7 @@ def get_readings_by_day(tz_mod: str, date: str):
     return [dict(r) for r in rows]
 
 
-def get_readings_by_hour(tz_mod: str, date: str, hour: int):
+def get_readings_by_hour(tz_mod: str, date: str, hour: int) -> list[dict]:
     rows = _conn.execute(
         """
         SELECT
