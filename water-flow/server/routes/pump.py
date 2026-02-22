@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import threading
 
 import db
@@ -25,6 +25,7 @@ pump_state = {
     "reason":        "server_start",
     "since":         datetime.now(timezone.utc).isoformat(),
     "last_esp_poll": None,
+    "timer_end":     None,   # UTC ISO string while a timer is active, else None
 }
 
 db.insert_event("off", "server_start")
@@ -51,6 +52,20 @@ def _reading_age_ms(recorded_at: str) -> float:
 # ── Safety + auto mode logic ──────────────────────────────────────────
 # Must be called while holding _lock.
 def _evaluate_auto_mode():
+    # Timer check: if a user-set timer has expired, turn pump off and return to auto.
+    if pump_state["timer_end"] is not None:
+        timer_dt = datetime.fromisoformat(pump_state["timer_end"])
+        if timer_dt.tzinfo is None:
+            timer_dt = timer_dt.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) >= timer_dt:
+            pump_state["timer_end"] = None
+            pump_state["pump_on"]   = False
+            pump_state["mode"]      = "auto"
+            pump_state["reason"]    = "timer_done"
+            pump_state["since"]     = _now_iso()
+            db.insert_event("off", "timer_done")
+            return
+
     # Safety rule 1: max runtime — applies in any mode.
     if pump_state["pump_on"]:
         if _age_ms(pump_state["since"]) > MAX_PUMP_RUNTIME_MS:
@@ -113,6 +128,9 @@ def post_override():
     action = body.get("action")
 
     with _lock:
+        # Any manual override cancels an active timer.
+        pump_state["timer_end"] = None
+
         if action == "auto":
             pump_state["mode"]   = "auto"
             pump_state["reason"] = "return_to_auto"
@@ -143,3 +161,30 @@ def get_status():
             "sensor":        db.get_latest_reading(),
             "recent_events": db.get_recent_events(),
         })
+
+
+# POST /api/pump/timer — start or cancel a server-side countdown timer
+# { "seconds": N }  — start timer for N seconds (turns pump on)
+# { "seconds": 0 }  — cancel active timer (turns pump off, returns to auto)
+@pump_bp.route("/timer", methods=["POST"])
+def post_timer():
+    body = request.get_json()
+    seconds = body.get("seconds", 0)
+
+    with _lock:
+        if seconds <= 0:
+            pump_state["timer_end"] = None
+            pump_state["pump_on"]   = False
+            pump_state["mode"]      = "auto"
+            pump_state["reason"]    = "timer_cancelled"
+            pump_state["since"]     = _now_iso()
+            db.insert_event("off", "timer_cancelled")
+            return jsonify({"ok": True})
+
+        pump_state["timer_end"] = (datetime.now(timezone.utc) + timedelta(seconds=seconds)).isoformat()
+        pump_state["pump_on"]   = True
+        pump_state["mode"]      = "manual_on"
+        pump_state["reason"]    = "timer"
+        pump_state["since"]     = _now_iso()
+        db.insert_event("on", "timer")
+        return jsonify({"ok": True})

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 // ── Helpers ───────────────────────────────────────────────────────────
 // Returns today's date in the browser's local timezone as YYYY-MM-DD.
@@ -47,6 +47,9 @@ function reasonLabel(reason) {
     "return_to_auto":        "Returned to auto",
     "safety:sensor_offline": "Safety — sensor offline",
     "safety:max_runtime":    "Safety — max runtime",
+    "timer":                 "Manual timer",
+    "timer_done":            "Timer finished",
+    "timer_cancelled":       "Timer cancelled",
   };
   return map[reason] || reason;
 }
@@ -212,8 +215,7 @@ function ControlTab({ tankConfig }) {
   const [loading, setLoading]       = useState(false);
   const [timerMinutes, setTimerMinutes] = useState(5);
   const [timerSeconds, setTimerSeconds] = useState(0);
-  const [remaining, setRemaining]   = useState(null);
-  const timerRef = useRef(null);
+  const [, rerender] = useState(0); // tick every second for smooth countdown display
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -231,6 +233,12 @@ function ControlTab({ tankConfig }) {
     const id = setInterval(fetchStatus, 3000);
     return () => clearInterval(id);
   }, [fetchStatus]);
+
+  // Re-render every second so the derived countdown display stays smooth.
+  useEffect(() => {
+    const id = setInterval(() => rerender((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const sendOverride = async (action) => {
     setLoading(true);
@@ -252,39 +260,51 @@ function ControlTab({ tankConfig }) {
   const startTimer = async () => {
     const total = timerMinutes * 60 + timerSeconds;
     if (total <= 0) return;
-    await sendOverride("on");
-    setRemaining(total);
-    clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => {
-      setRemaining((prev) => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current);
-          timerRef.current = null;
-          sendOverride("off");
-          return null;
-        }
-        return prev - 1;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/pump/timer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seconds: total }),
       });
-    }, 1000);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await fetchStatus();
+    } catch {
+      setError("Failed to start timer");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const cancelTimer = async () => {
-    clearInterval(timerRef.current);
-    timerRef.current = null;
-    setRemaining(null);
-    await sendOverride("off");
+    setLoading(true);
+    try {
+      const res = await fetch("/api/pump/timer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seconds: 0 }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await fetchStatus();
+    } catch {
+      setError("Failed to cancel timer");
+    } finally {
+      setLoading(false);
+    }
   };
-
-  useEffect(() => () => clearInterval(timerRef.current), []);
 
   const fmtRemaining = (s) =>
     `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 
-  const sensor   = status?.sensor ?? null;
-  const levelPct = sensor ? Math.round(sensor.level_pct) : null;
-  const fresh    = isSensorFresh(sensor?.recorded_at);
-  const isAuto   = status?.mode === "auto";
-  const liters   = calcLiters(levelPct, tankConfig);
+  const sensor    = status?.sensor ?? null;
+  const levelPct  = sensor ? Math.round(sensor.level_pct) : null;
+  const fresh     = isSensorFresh(sensor?.recorded_at);
+  const isAuto    = status?.mode === "auto";
+  const liters    = calcLiters(levelPct, tankConfig);
+
+  // Derive remaining time from the server's timer_end — works across devices and reloads.
+  const timerEnd  = status?.timer_end ? new Date(status.timer_end) : null;
+  const remaining = timerEnd ? Math.max(0, Math.round((timerEnd - Date.now()) / 1000)) : null;
 
   return (
     <>
