@@ -1,20 +1,19 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from flask import Flask
 
-from routes import pump, sensor
+from routes.pump import pump_bp
+from routes.sensor import sensor_bp
 
-app = FastAPI()
+app = Flask(__name__)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+@app.after_request
+def add_cors(response):
+    response.headers["Access-Control-Allow-Origin"]  = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
 
-app.include_router(pump.router,   prefix="/api/pump")
-app.include_router(sensor.router, prefix="/api/sensor")
+app.register_blueprint(pump_bp,   url_prefix="/api/pump")
+app.register_blueprint(sensor_bp, url_prefix="/api/sensor")
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=3001)
+    app.run(host="0.0.0.0", port=3001)

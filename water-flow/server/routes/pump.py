@@ -1,11 +1,10 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from flask import Blueprint, request, jsonify
 from datetime import datetime, timezone
 import threading
 
 import db
 
-router = APIRouter()
+pump_bp = Blueprint("pump", __name__)
 
 # ── Thresholds ────────────────────────────────────────────────────────
 LOW_THRESHOLD  = 20   # % — pump turns ON when level drops below this
@@ -94,37 +93,35 @@ def _evaluate_auto_mode():
 # ── Routes ────────────────────────────────────────────────────────────
 
 # GET /api/pump/command — polled by ESP32 #2 (garage/pump node)
-@router.get("/command")
+@pump_bp.route("/command")
 def get_command():
     with _lock:
         pump_state["last_esp_poll"] = _now_iso()
         _evaluate_auto_mode()
-        return {
+        return jsonify({
             "pump_on": pump_state["pump_on"],
             "reason":  pump_state["reason"],
             "since":   pump_state["since"],
-        }
-
-
-class OverrideRequest(BaseModel):
-    action: str
+        })
 
 
 # POST /api/pump/override — manual control from dashboard
 # action: "on" | "off" | "auto"
-@router.post("/override")
-def post_override(body: OverrideRequest):
-    action = body.action
+@pump_bp.route("/override", methods=["POST"])
+def post_override():
+    body = request.get_json()
+    action = body.get("action")
+
     with _lock:
         if action == "auto":
             pump_state["mode"]   = "auto"
             pump_state["reason"] = "return_to_auto"
             pump_state["since"]  = _now_iso()
             _evaluate_auto_mode()
-            return {"changed": True, **pump_state}
+            return jsonify({"changed": True, **pump_state})
 
         if action not in ("on", "off"):
-            raise HTTPException(status_code=400, detail='action must be "on", "off", or "auto"')
+            return jsonify({"error": 'action must be "on", "off", or "auto"'}), 400
 
         desired = action == "on"
         pump_state["mode"]    = "manual_on" if desired else "manual_off"
@@ -133,16 +130,16 @@ def post_override(body: OverrideRequest):
         pump_state["since"]   = _now_iso()
         db.insert_event(action, "manual")
 
-        return {"changed": True, **pump_state}
+        return jsonify({"changed": True, **pump_state})
 
 
 # GET /api/pump/status — full state for dashboard (includes latest sensor reading)
-@router.get("/status")
+@pump_bp.route("/status")
 def get_status():
     with _lock:
         _evaluate_auto_mode()
-        return {
+        return jsonify({
             **pump_state,
             "sensor":        db.get_latest_reading(),
             "recent_events": db.get_recent_events(),
-        }
+        })
