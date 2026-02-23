@@ -39,6 +39,16 @@ def get_recent_events() -> list[dict]:
 
 def insert_reading(distance_cm: float, level_pct: float) -> None:
     with _lock:
+        last = _conn.execute(
+            "SELECT recorded_at FROM sensor_readings ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+        if last:
+            seconds_since = _conn.execute(
+                "SELECT CAST((julianday('now') - julianday(?)) * 86400 AS INTEGER)",
+                (last["recorded_at"],),
+            ).fetchone()[0]
+            if seconds_since < 60:
+                return
         _conn.execute(
             "INSERT INTO sensor_readings (distance_cm, level_pct) VALUES (?, ?)",
             (distance_cm, level_pct),
