@@ -6,8 +6,8 @@ from app.db import get_latest_reading, get_readings_by_day, get_readings_by_hour
 
 sensor_bp = Blueprint("sensor", __name__)
 
-TANK_RADIUS_CM       = 50   # cylinder radius in cm — adjust to your tank
-TANK_WATER_HEIGHT_CM = 55   # usable water column height in cm
+TANK_RADIUS_CM       = 40   # cylinder radius in cm — adjust to your tank
+TANK_WATER_HEIGHT_CM = 60   # usable water column height in cm
 TZ_OFFSET_HOURS      = -6   # CST (Mexico) = UTC-6; CDT (summer) = UTC-5
 _TZ_MOD              = f"{'+' if TZ_OFFSET_HOURS >= 0 else ''}{TZ_OFFSET_HOURS} hours"
 
