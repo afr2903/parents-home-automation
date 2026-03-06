@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, jsonify, request
 
-from app.db import get_latest_reading, get_recent_events, insert_event
+from app.db import get_latest_reading, get_recent_events, insert_event, insert_pump_heartbeat
 from app.pump_logic import evaluate_auto_mode, now_iso
 from app.pump_state import lock, state
 
@@ -12,6 +12,7 @@ pump_bp = Blueprint("pump", __name__)
 @pump_bp.route("/command")
 def get_command():
     """ESP32 polling endpoint — returns current pump command."""
+    insert_pump_heartbeat()
     with lock:
         state["last_esp_poll"] = now_iso()
         evaluate_auto_mode()
