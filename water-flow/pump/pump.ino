@@ -7,7 +7,7 @@ const char* WIFI_SSID     = "";
 const char* WIFI_PASSWORD = "";
 
 // Update this to your server's local IP before flashing
-const char* SERVER_IP   = "192.168.1.221";
+const char* SERVER_IP   = "192.168.1.100";
 const int   SERVER_PORT = 3001;
 
 const int PUMP_PIN        = 13;
@@ -28,6 +28,9 @@ void setPump(bool on) {
 void connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) return;
 
+  WiFi.disconnect(true);
+  delay(100);
+
   Serial.print("Connecting to WiFi");
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
@@ -42,6 +45,9 @@ void connectWiFi() {
     Serial.println();
     Serial.print("Connected - IP: ");
     Serial.println(WiFi.localIP());
+    Serial.print("Gateway: ");
+    Serial.println(WiFi.gatewayIP());
+    delay(500);
   } else {
     Serial.println();
     Serial.println("WiFi connection failed");
@@ -54,6 +60,7 @@ void setup() {
   pinMode(PUMP_PIN, OUTPUT);
   setPump(false);
 
+  WiFi.mode(WIFI_STA);
   connectWiFi();
   lastSuccess = millis();
 }
@@ -89,6 +96,7 @@ void loop() {
     HTTPClient http;
     http.begin(url);
     http.setTimeout(5000);
+    http.useHTTP10(true);
 
     int code = http.GET();
 

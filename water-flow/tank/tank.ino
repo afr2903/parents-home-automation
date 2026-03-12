@@ -7,7 +7,7 @@
 // The sensor sits on the lid pointing down at the water surface.
 // A greater distance means less water.
 const float EMPTY_DISTANCE_CM = 70.0;  // distance (cm) when tank is considered empty
-const float FULL_DISTANCE_CM  = 15.0;  // distance (cm) when tank is considered full
+const float FULL_DISTANCE_CM  = 20.0;  // distance (cm) when tank is considered full
 
 // ── Hardware ──────────────────────────────────────────────────────────
 const int TRIG_PIN = 13;
@@ -18,7 +18,7 @@ const char* WIFI_SSID     = "";
 const char* WIFI_PASSWORD = "";
 
 // Update this to your server's local IP before flashing
-const char* SERVER_IP   = "192.168.1.221";
+const char* SERVER_IP   = "192.168.1.100";
 const int   SERVER_PORT = 3001;
 
 // ── Timing ────────────────────────────────────────────────────────────
@@ -29,6 +29,9 @@ unsigned long lastRead = 0;
 // ── WiFi ──────────────────────────────────────────────────────────────
 void connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) return;
+
+  WiFi.disconnect(true);
+  delay(100);
 
   Serial.print("Connecting to WiFi");
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -44,6 +47,9 @@ void connectWiFi() {
     Serial.println();
     Serial.print("Connected - IP: ");
     Serial.println(WiFi.localIP());
+    Serial.print("Gateway: ");
+    Serial.println(WiFi.gatewayIP());
+    delay(500);
   } else {
     Serial.println();
     Serial.println("WiFi connection failed, will retry");
@@ -82,6 +88,7 @@ void setup() {
   pinMode(TRIG_PIN, OUTPUT);
   pinMode(ECHO_PIN, INPUT);
 
+  WiFi.mode(WIFI_STA);
   connectWiFi();
 }
 
@@ -121,6 +128,7 @@ void loop() {
     http.begin(url);
     http.addHeader("Content-Type", "application/json");
     http.setTimeout(5000);
+    http.useHTTP10(true);
 
     JsonDocument doc;
     doc["distance_cm"] = distance;
