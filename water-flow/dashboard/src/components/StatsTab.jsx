@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
+import { apiFetch } from "../utils/api";
 
 const DOW_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const DOW_FULL  = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-// ── Mini SVG bar chart ────────────────────────────────────────────────────────
+// -- Mini SVG bar chart -------------------------------------------------------
 function BarChart({ data, xLabel, yMax, color = "#3b82f6", barCount = null, emptyMsg = "No data yet" }) {
   const W = 360, H = 100, MB = 20, ML = 0, MT = 6;
   const plotW = W - ML;
@@ -40,7 +41,7 @@ function BarChart({ data, xLabel, yMax, color = "#3b82f6", barCount = null, empt
   );
 }
 
-// ── Uptime ring ───────────────────────────────────────────────────────────────
+// -- Uptime ring --------------------------------------------------------------
 function UptimeRing({ pct, status }) {
   const R = 32, CX = 40, CY = 40, SW = 7;
   const circ = 2 * Math.PI * R;
@@ -78,26 +79,34 @@ function shortDate(iso) {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
-export default function StatsTab() {
+// -- Main component -----------------------------------------------------------
+export default function StatsTab({ onAuthError }) {
   const [water,  setWater]  = useState(null);
   const [uptime, setUptime] = useState(null);
   const [wErr,   setWErr]   = useState(null);
   const [uErr,   setUErr]   = useState(null);
 
   useEffect(() => {
-    fetch("/api/stats/water")
-      .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
-      .then(setWater)
+    apiFetch("/api/stats/water")
+      .then((r) => {
+        if (r.status === 401 || r.status === 403) { onAuthError(); return; }
+        if (!r.ok) throw new Error();
+        return r.json();
+      })
+      .then((data) => { if (data) setWater(data); })
       .catch(() => setWErr("Failed to load water stats"));
 
-    fetch("/api/stats/uptime")
-      .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
-      .then(setUptime)
+    apiFetch("/api/stats/uptime")
+      .then((r) => {
+        if (r.status === 401 || r.status === 403) { onAuthError(); return; }
+        if (!r.ok) throw new Error();
+        return r.json();
+      })
+      .then((data) => { if (data) setUptime(data); })
       .catch(() => setUErr("Failed to load uptime stats"));
-  }, []);
+  }, [onAuthError]);
 
-  // ── Water usage charts ──
+  // -- Water usage charts --
   const dailyBars = water?.daily.map((r) => ({
     label: shortDate(r.day),
     value: r.liters_consumed,
@@ -119,13 +128,13 @@ export default function StatsTab() {
 
   return (
     <>
-      {/* ── Water Usage ─────────────────────────────────────── */}
+      {/* -- Water Usage --------------------------------------------------- */}
       <div className="stats-section-header">Water Usage</div>
 
       {wErr ? (
         <div className="error">{wErr}</div>
       ) : !water ? (
-        <p className="loading" style={{ padding: "24px 0" }}>Loading…</p>
+        <p className="loading" style={{ padding: "24px 0" }}>Loading...</p>
       ) : (
         <>
           {/* Summary cards */}
@@ -149,20 +158,20 @@ export default function StatsTab() {
             <div className="card stats-insights">
               {peakDate && (
                 <div className="insight-row">
-                  <span className="insight-icon">📅</span>
+                  <span className="insight-icon">{"\ud83d\udcc5"}</span>
                   <span>Peak day this week: <strong>{shortDate(peakDate)}</strong></span>
                 </div>
               )}
               {peakDow !== null && (
                 <div className="insight-row">
-                  <span className="insight-icon">📆</span>
+                  <span className="insight-icon">{"\ud83d\udcc6"}</span>
                   <span>Busiest day of week: <strong>{DOW_FULL[peakDow]}</strong></span>
                 </div>
               )}
               {peakHour !== null && (
                 <div className="insight-row">
-                  <span className="insight-icon">🕐</span>
-                  <span>Peak hour: <strong>{String(peakHour).padStart(2, "0")}:00–{String(peakHour).padStart(2, "0")}:59</strong></span>
+                  <span className="insight-icon">{"\ud83d\udd50"}</span>
+                  <span>Peak hour: <strong>{String(peakHour).padStart(2, "0")}:00\u2013{String(peakHour).padStart(2, "0")}:59</strong></span>
                 </div>
               )}
             </div>
@@ -170,7 +179,7 @@ export default function StatsTab() {
 
           {/* Daily bar chart */}
           <div className="card stats-chart-card">
-            <div className="stats-chart-title">Daily consumption — last 7 days</div>
+            <div className="stats-chart-title">Daily consumption \u2014 last 7 days</div>
             <BarChart data={dailyBars} color="#3b82f6" emptyMsg="No readings in the past 7 days" />
           </div>
 
@@ -190,13 +199,13 @@ export default function StatsTab() {
         </>
       )}
 
-      {/* ── Uptime ──────────────────────────────────────────── */}
+      {/* -- Uptime -------------------------------------------------------- */}
       <div className="stats-section-header" style={{ marginTop: 8 }}>System Uptime</div>
 
       {uErr ? (
         <div className="error">{uErr}</div>
       ) : !uptime ? (
-        <p className="loading" style={{ padding: "24px 0" }}>Loading…</p>
+        <p className="loading" style={{ padding: "24px 0" }}>Loading...</p>
       ) : (
         <>
           {[
