@@ -2,6 +2,7 @@ import re
 
 from flask import Blueprint, jsonify, request
 
+from app.auth import require_api_key, require_oauth
 from app.db import get_latest_reading, get_readings_by_day, get_readings_by_hour, insert_reading
 
 sensor_bp = Blueprint("sensor", __name__)
@@ -13,23 +14,32 @@ _TZ_MOD              = f"{'+' if TZ_OFFSET_HOURS >= 0 else ''}{TZ_OFFSET_HOURS} 
 
 
 @sensor_bp.route("/reading", methods=["POST"])
+@require_api_key("TANK_API_KEY")
 def post_reading():
-    """Tank ESP32 sensor upload — called every ~10 s."""
-    body        = request.get_json()
+    """Tank ESP32 sensor upload — called every ~60 s."""
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({"error": "request body must be JSON"}), 400
     distance_cm = body.get("distance_cm")
     level_pct   = body.get("level_pct")
     if not isinstance(distance_cm, (int, float)) or not isinstance(level_pct, (int, float)):
         return jsonify({"error": "distance_cm and level_pct must be numbers"}), 400
+    if not (0 <= distance_cm <= 200):
+        return jsonify({"error": "distance_cm must be 0-200"}), 400
+    if not (0 <= level_pct <= 100):
+        return jsonify({"error": "level_pct must be 0-100"}), 400
     insert_reading(distance_cm, level_pct)
     return jsonify({"ok": True})
 
 
 @sensor_bp.route("/latest")
+@require_oauth
 def get_latest():
     return jsonify({"reading": get_latest_reading()})
 
 
 @sensor_bp.route("/config")
+@require_oauth
 def get_config():
     return jsonify({
         "TANK_RADIUS_CM":       TANK_RADIUS_CM,
@@ -39,6 +49,7 @@ def get_config():
 
 
 @sensor_bp.route("/history")
+@require_oauth
 def get_history():
     """?date=YYYY-MM-DD[&hour=0-23] — hourly or per-minute averages."""
     date = request.args.get("date", "")

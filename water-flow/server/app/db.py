@@ -1,11 +1,21 @@
 from __future__ import annotations
 
+import logging
 import math
+import os
 import sqlite3
+import sys
 import threading
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent.parent / "pump.db"
+logger = logging.getLogger(__name__)
+
+DB_PATH = Path(os.environ.get("DB_PATH", str(Path(__file__).parent.parent / "pump.db")))
+
+# Volume mount safety check: if DB_PATH is on /data/ but /data is not mounted, exit
+if str(DB_PATH).startswith("/data/") and not os.path.ismount("/data"):
+    logger.critical("DB_PATH is %s but /data is not a mount point. Is the Fly Volume attached?", DB_PATH)
+    sys.exit(1)
 
 _lock = threading.Lock()
 _conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
@@ -54,7 +64,7 @@ def insert_reading(distance_cm: float, level_pct: float) -> None:
                 "SELECT CAST((julianday('now') - julianday(?)) * 86400 AS INTEGER)",
                 (last["recorded_at"],),
             ).fetchone()[0]
-            if seconds_since < 60:
+            if seconds_since < 30:
                 return
         _conn.execute(
             "INSERT INTO sensor_readings (distance_cm, level_pct) VALUES (?, ?)",
