@@ -171,7 +171,7 @@ export default function StatsTab({ onAuthError }) {
               {peakHour !== null && (
                 <div className="insight-row">
                   <span className="insight-icon">{"\ud83d\udd50"}</span>
-                  <span>Peak hour: <strong>{String(peakHour).padStart(2, "0")}:00\u2013{String(peakHour).padStart(2, "0")}:59</strong></span>
+                  <span>Peak hour: <strong>{String(peakHour).padStart(2, "0")}:00{"\u2013"}{String(peakHour).padStart(2, "0")}:59</strong></span>
                 </div>
               )}
             </div>
@@ -179,7 +179,7 @@ export default function StatsTab({ onAuthError }) {
 
           {/* Daily bar chart */}
           <div className="card stats-chart-card">
-            <div className="stats-chart-title">Daily consumption \u2014 last 7 days</div>
+            <div className="stats-chart-title">Daily consumption {"\u2014"} last 7 days</div>
             <BarChart data={dailyBars} color="#3b82f6" emptyMsg="No readings in the past 7 days" />
           </div>
 

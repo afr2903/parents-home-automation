@@ -52,9 +52,11 @@ export default function HistoryTab({ tankConfig, onAuthError }) {
       {hour !== null ? (
         <div className="card history-nav">
           <button className="btn-nav" onClick={() => setHour(null)}>{"\u2190"} Day</button>
+          <button className="btn-nav" onClick={() => setHour(hour - 1)} disabled={hour === 0}>{"\u2039"}</button>
           <span className="nav-title">
-            {displayDate} {"\u00b7"} {String(hour).padStart(2, "0")}:00\u2013{String(hour).padStart(2, "0")}:59
+            {String(hour).padStart(2, "0")}:00{"\u2013"}{String(hour).padStart(2, "0")}:59
           </span>
+          <button className="btn-nav" onClick={() => setHour(hour + 1)} disabled={hour === 23}>{"\u203a"}</button>
         </div>
       ) : (
         <div className="card history-nav">

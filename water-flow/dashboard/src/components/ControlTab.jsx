@@ -27,7 +27,7 @@ export default function ControlTab({ tankConfig, onAuthError }) {
 
   useEffect(() => {
     fetchStatus();
-    const id = setInterval(fetchStatus, 3000);
+    const id = setInterval(fetchStatus, 5000);
     return () => clearInterval(id);
   }, [fetchStatus]);
 
