@@ -21,12 +21,14 @@ def create_app() -> Flask:
     limiter = Limiter(
         get_remote_address,
         app=app,
-        default_limits=["100/minute"],
+        default_limits=["200/minute"],
         storage_uri="memory://",
     )
-    limiter.limit("5/minute")(sensor_bp)
-    limiter.limit("10/minute")(pump_bp)
-    limiter.limit("30/minute")(stats_bp)
+    # Per-blueprint limits. pump_bp and sensor_bp serve both ESP32 devices
+    # AND the dashboard, so limits must accommodate dashboard polling (~12/min).
+    limiter.limit("60/minute")(sensor_bp)
+    limiter.limit("60/minute")(pump_bp)
+    limiter.limit("60/minute")(stats_bp)
 
     app.register_blueprint(pump_bp,   url_prefix="/api/pump")
     app.register_blueprint(sensor_bp, url_prefix="/api/sensor")
@@ -35,5 +37,19 @@ def create_app() -> Flask:
     @app.route("/health")
     def health():
         return {"status": "ok"}, 200
+
+    # Ensure 429 responses include CORS headers so the browser doesn't
+    # misreport the rate limit error as a CORS error.
+    from flask import jsonify as _jsonify, request as _request
+
+    @app.errorhandler(429)
+    def ratelimit_handler(e):
+        origin = _request.headers.get("Origin", "")
+        resp = _jsonify({"error": "rate limit exceeded"})
+        resp.status_code = 429
+        if origin and (origins == ["*"] or origin in origins):
+            resp.headers["Access-Control-Allow-Origin"] = origin
+            resp.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type"
+        return resp
 
     return app
