@@ -9,7 +9,7 @@ export function todayLocal() {
 
 export function isSensorFresh(recordedAt) {
   if (!recordedAt) return false;
-  return Date.now() - new Date(recordedAt + "Z").getTime() < 120_000;
+  return Date.now() - new Date(recordedAt + "Z").getTime() < 180_000;
 }
 
 export function calcLiters(pct, tankConfig) {

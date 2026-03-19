@@ -1,1 +1,6 @@
 flask
+flask-cors
+gunicorn
+flask-limiter
+google-auth
+requests

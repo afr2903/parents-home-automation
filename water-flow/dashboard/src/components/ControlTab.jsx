@@ -3,8 +3,9 @@ import { useState, useEffect, useCallback } from "react";
 import TankVisual from "./TankVisual";
 import { fmtRemaining, formatTime, modeLabel, reasonLabel, timeSince } from "../utils/format";
 import { calcLiters, isSensorFresh } from "../utils/tank";
+import { apiFetch } from "../utils/api";
 
-export default function ControlTab({ tankConfig }) {
+export default function ControlTab({ tankConfig, onAuthError }) {
   const [status, setStatus]             = useState(null);
   const [error, setError]               = useState(null);
   const [loading, setLoading]           = useState(false);
@@ -14,18 +15,19 @@ export default function ControlTab({ tankConfig }) {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await fetch("/api/pump/status");
+      const res = await apiFetch("/api/pump/status");
+      if (res.status === 401 || res.status === 403) { onAuthError(); return; }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setStatus(await res.json());
       setError(null);
     } catch {
       setError("Cannot reach server");
     }
-  }, []);
+  }, [onAuthError]);
 
   useEffect(() => {
     fetchStatus();
-    const id = setInterval(fetchStatus, 3000);
+    const id = setInterval(fetchStatus, 5000);
     return () => clearInterval(id);
   }, [fetchStatus]);
 
@@ -38,11 +40,12 @@ export default function ControlTab({ tankConfig }) {
   const sendOverride = async (action) => {
     setLoading(true);
     try {
-      const res = await fetch("/api/pump/override", {
+      const res = await apiFetch("/api/pump/override", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action }),
       });
+      if (res.status === 401 || res.status === 403) { onAuthError(); return; }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       await fetchStatus();
     } catch {
@@ -57,11 +60,12 @@ export default function ControlTab({ tankConfig }) {
     if (total <= 0) return;
     setLoading(true);
     try {
-      const res = await fetch("/api/pump/timer", {
+      const res = await apiFetch("/api/pump/timer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ seconds: total }),
       });
+      if (res.status === 401 || res.status === 403) { onAuthError(); return; }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       await fetchStatus();
     } catch {
@@ -74,11 +78,12 @@ export default function ControlTab({ tankConfig }) {
   const cancelTimer = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/pump/timer", {
+      const res = await apiFetch("/api/pump/timer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ seconds: 0 }),
       });
+      if (res.status === 401 || res.status === 403) { onAuthError(); return; }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       await fetchStatus();
     } catch {
@@ -96,7 +101,7 @@ export default function ControlTab({ tankConfig }) {
   const timerEnd  = status?.timer_end ? new Date(status.timer_end) : null;
   const remaining = timerEnd ? Math.max(0, Math.round((timerEnd - Date.now()) / 1000)) : null;
 
-  if (!status && !error) return <p className="loading">Loading…</p>;
+  if (!status && !error) return <p className="loading">Loading...</p>;
 
   return (
     <>
@@ -112,7 +117,7 @@ export default function ControlTab({ tankConfig }) {
               <div className="tank-level-big" style={{
                 color: levelPct < 20 ? "#ef4444" : levelPct < 40 ? "#f97316" : "#1e40af",
               }}>
-                {levelPct !== null ? `${levelPct}%` : "—"}
+                {levelPct !== null ? `${levelPct}%` : "\u2014"}
               </div>
               {liters !== null && <div className="tank-liters">{liters} L</div>}
               <div className="tank-level-label">Water level</div>

@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 
 import LevelChart from "./LevelChart";
 import { calcLiters, todayLocal } from "../utils/tank";
+import { apiFetch } from "../utils/api";
 
-export default function HistoryTab({ tankConfig }) {
+export default function HistoryTab({ tankConfig, onAuthError }) {
   const [date, setDate]       = useState(todayLocal);
   const [hour, setHour]       = useState(null);
   const [data, setData]       = useState([]);
@@ -16,11 +17,15 @@ export default function HistoryTab({ tankConfig }) {
     const url = hour !== null
       ? `/api/sensor/history?date=${date}&hour=${hour}`
       : `/api/sensor/history?date=${date}`;
-    fetch(url)
-      .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
-      .then((body) => { setData(body.readings || []); setLoading(false); })
+    apiFetch(url)
+      .then((r) => {
+        if (r.status === 401 || r.status === 403) { onAuthError(); return; }
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((body) => { if (body) { setData(body.readings || []); setLoading(false); } })
       .catch(() => { setError("Failed to load history"); setLoading(false); });
-  }, [date, hour]);
+  }, [date, hour, onAuthError]);
 
   const navigate = (delta) => {
     const d = new Date(date + "T12:00:00Z");
@@ -46,22 +51,24 @@ export default function HistoryTab({ tankConfig }) {
     <>
       {hour !== null ? (
         <div className="card history-nav">
-          <button className="btn-nav" onClick={() => setHour(null)}>← Day</button>
+          <button className="btn-nav" onClick={() => setHour(null)}>{"\u2190"} Day</button>
+          <button className="btn-nav" onClick={() => setHour(hour - 1)} disabled={hour === 0}>{"\u2039"}</button>
           <span className="nav-title">
-            {displayDate} · {String(hour).padStart(2, "0")}:00–{String(hour).padStart(2, "0")}:59
+            {String(hour).padStart(2, "0")}:00{"\u2013"}{String(hour).padStart(2, "0")}:59
           </span>
+          <button className="btn-nav" onClick={() => setHour(hour + 1)} disabled={hour === 23}>{"\u203a"}</button>
         </div>
       ) : (
         <div className="card history-nav">
-          <button className="btn-nav" onClick={() => navigate(-1)}>‹</button>
+          <button className="btn-nav" onClick={() => navigate(-1)}>{"\u2039"}</button>
           <span className="nav-title">{displayDate}</span>
-          <button className="btn-nav" onClick={() => navigate(1)} disabled={date >= todayLocal()}>›</button>
+          <button className="btn-nav" onClick={() => navigate(1)} disabled={date >= todayLocal()}>{"\u203a"}</button>
         </div>
       )}
 
       <div className="card history-chart-card">
         {loading ? (
-          <p className="loading" style={{ padding: "24px 0" }}>Loading…</p>
+          <p className="loading" style={{ padding: "24px 0" }}>Loading...</p>
         ) : error ? (
           <p className="error" style={{ margin: "12px 0" }}>{error}</p>
         ) : (
